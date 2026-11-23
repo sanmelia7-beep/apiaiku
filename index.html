@@ -1,0 +1,1229 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>APIAIku</title>
+  <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <style>
+    :root {
+      --bg-main: #ffffff;
+      --bg-surface: #f4f6f8;
+      --bg-user: #e9eef6;
+      --border: #e2e8f0;
+      --text-main: #1f1f1f;
+      --text-muted: #5f6368;
+      --accent: #1a73e8;
+      --accent-hover: #1557b0;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg-main);
+      color: var(--text-main);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      font-size: 13.5px;
+      position: relative;
+    }
+
+    /* Header Top Bar */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 7px 10px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-main);
+      flex-shrink: 0;
+      z-index: 20;
+      gap: 4px;
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      overflow: hidden;
+    }
+
+    /* Logo Brand APIAIku */
+    .app-brand {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding-right: 6px;
+      border-right: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .app-brand svg { width: 20px; height: 20px; }
+    .app-brand-name {
+      font-weight: 700;
+      font-size: 12.5px;
+      letter-spacing: -0.3px;
+      background: linear-gradient(135deg, #1a73e8, #8b5cf6);
+      -webkit-background-clip: text;-webkit-background-clip: text;
+   background-clip: text;
+   -webkit-text-fill-color: transparent;
+      -webkit-text-fill-color: transparent;
+    }
+
+    /* Provider Logo Switcher Bar */
+    .provider-logos {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+    }
+    .logo-pill {
+      width: 26px;
+      height: 26px;
+      border-radius: 7px;
+      border: 1px solid transparent;
+      background: transparent;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: 0.15s;
+      position: relative;
+      flex-shrink: 0;
+    }
+    .logo-pill:hover { background: var(--bg-surface); }
+    .logo-pill.active {
+      background: var(--bg-user);
+      border-color: #c2d7fa;
+    }
+    .logo-pill svg { width: 15px; height: 15px; display: block; }
+    .key-dot {
+      position: absolute;
+      bottom: 2px;
+      right: 2px;
+      width: 4.5px;
+      height: 4.5px;
+      border-radius: 50%;
+      background: #10b981;
+      display: none;
+    }
+    .logo-pill.has-key .key-dot { display: block; }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      flex-shrink: 0;
+    }
+    .icon-btn {
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 7px;
+      padding: 4px 6px;
+      cursor: pointer;
+      color: var(--text-muted);
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      transition: 0.15s;
+    }
+    .icon-btn:hover { background: var(--bg-surface); color: var(--text-main); }
+
+    /* Pop-over Overlay (Settings & History) */
+    .drawer-overlay {
+      display: none;
+      position: fixed;
+      top: 44px;
+      left: 10px;
+      right: 10px;
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 13px;
+      box-shadow: 0 10px 28px rgba(0,0,0,0.16);
+      z-index: 999;
+      max-height: 75vh;
+      overflow-y: auto;
+    }
+    .drawer-overlay.open { display: block; }
+    .drawer-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      font-weight: 600;
+      font-size: 13px;
+    }
+    .drawer-overlay label {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+    .drawer-overlay input {
+      width: 100%;
+      padding: 7px 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 12.5px;
+      margin-bottom: 10px;
+      background: var(--bg-surface);
+      color: var(--text-main);
+    }
+    .drawer-overlay input:focus {
+      background: #fff;
+      outline: none;
+      border-color: var(--accent);
+    }
+    .btn-primary {
+      width: 100%;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 8px;
+      font-size: 12.5px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-primary:hover { background: var(--accent-hover); }
+
+    /* History List Styling */
+    .history-toolbar {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+    .btn-secondary-sm {
+      flex: 1;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 6px 8px;
+      font-size: 11.5px;
+      font-weight: 500;
+      color: var(--text-main);
+      cursor: pointer;
+      text-align: center;
+    }
+    .btn-secondary-sm:hover { background: var(--bg-user); color: var(--accent); }
+    .btn-danger-sm {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      border-radius: 8px;
+      padding: 6px 8px;
+      font-size: 11.5px;
+      color: #dc2626;
+      cursor: pointer;
+    }
+    .history-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .history-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 10px;
+      background: var(--bg-surface);
+      border: 1px solid transparent;
+      border-radius: 9px;
+      cursor: pointer;
+      gap: 8px;
+    }
+    .history-item:hover { background: var(--bg-user); border-color: #c2d7fa; }
+    .history-item.active-session { border-color: var(--accent); background: #eff6ff; }
+    .history-info { overflow: hidden; flex: 1; }
+    .history-title {
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .history-meta {
+      font-size: 10.5px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+    .history-del {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 13px;
+      padding: 2px 5px;
+      border-radius: 4px;
+    }
+    .history-del:hover { background: #fee2e2; color: #dc2626; }
+
+    /* Chat Area */
+    .chat-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .welcome-screen {
+      margin: auto 0;
+      text-align: center;
+      padding: 16px 8px;
+    }
+    .welcome-logo {
+      width: 42px;
+      height: 42px;
+      margin: 0 auto 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #eff6ff;
+      border-radius: 14px;
+    }
+    .welcome-title {
+      font-size: 17px;
+      font-weight: 600;
+      background: linear-gradient(90deg, #1a73e8, #8b5cf6, #ec4899);
+      -webkit-background-clip: text;-webkit-background-clip: text;
+   background-clip: text;
+   -webkit-text-fill-color: transparent;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 6px;
+    }
+    .welcome-sub {
+      color: var(--text-muted);
+      font-size: 12px;
+      line-height: 1.4;
+      margin-bottom: 16px;
+    }
+    .quick-prompts {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .chip-prompt {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 8px 12px;
+      text-align: left;
+      font-size: 12px;
+      color: var(--text-main);
+      cursor: pointer;
+      transition: 0.15s;
+    }
+    .chip-prompt:hover { background: var(--bg-user); border-color: #c2d7fa; }
+
+    /* Message Bubbles */
+    .msg { display: flex; flex-direction: column; max-width: 100%; }
+    .msg.user { align-items: flex-end; }
+    .msg.ai { align-items: flex-start; }
+
+    .bubble {
+      padding: 10px 13px;
+      border-radius: 16px;
+      line-height: 1.5;
+      word-wrap: break-word;
+      max-width: 92%;
+    }
+    .msg.user .bubble {
+      background: var(--bg-user);
+      color: var(--text-main);
+      border-bottom-right-radius: 4px;
+      white-space: pre-wrap;
+    }
+    .msg.ai .bubble {
+      background: transparent;
+      padding: 2px 4px;
+      max-width: 100%;
+    }
+    .msg-attachment-badge {
+      display: inline-block;
+      font-size: 11px;
+      background: rgba(255,255,255,0.75);
+      padding: 2px 8px;
+      border-radius: 6px;
+      margin-bottom: 5px;
+      color: var(--text-muted);
+      border: 1px solid rgba(0,0,0,0.06);
+    }
+
+    /* Markdown Styling */
+    .msg.ai .bubble p { margin-bottom: 8px; }
+    .msg.ai .bubble p:last-child { margin-bottom: 0; }
+    .msg.ai .bubble ul, .msg.ai .bubble ol { padding-left: 18px; margin-bottom: 8px; }
+    .msg.ai .bubble code { background: #f1f3f4; padding: 2px 5px; border-radius: 4px; font-family: Consolas, monospace; font-size: 12px; }
+    .msg.ai .bubble pre { background: #1e293b; color: #f8fafc; padding: 10px; border-radius: 8px; overflow-x: auto; margin: 8px 0; }
+    .msg.ai .bubble pre code { background: transparent; color: inherit; padding: 0; }
+    .msg.ai .bubble table { border-collapse: collapse; width: 100%; margin: 8px 0; font-size: 12px; }
+    .msg.ai .bubble th, .msg.ai .bubble td { border: 1px solid var(--border); padding: 5px 8px; text-align: left; }
+    .msg.ai .bubble th { background: var(--bg-surface); }
+
+    /* AI Action Toolbar */
+    .ai-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 6px;
+    }
+    .edit-msg-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 11px;
+      cursor: pointer;
+      padding: 2px 6px;
+      border-radius: 6px;
+      opacity: 0.7;
+      transition: 0.15s;
+    }
+    .edit-msg-btn:hover { opacity: 1; background: var(--bg-surface); color: var(--accent); }
+    .action-pill {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 4px 10px;
+      font-size: 11.5px;
+      color: var(--text-muted);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: 0.15s;
+    }
+    .action-pill:hover { background: var(--bg-user); color: var(--accent); border-color: #c2d7fa; }
+    .action-pill.excel:hover { background: #e6f4ea; color: #137333; border-color: #ceead6; }
+
+    /* Typing Indicator */
+    .typing { color: var(--text-muted); font-size: 12.5px; font-style: italic; display: flex; align-items: center; gap: 6px; }
+    .dot-pulse { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); animation: pulse 1s infinite alternate; }
+    @keyframes pulse { from { opacity: 0.3; transform: scale(0.8); } to { opacity: 1; transform: scale(1.1); } }
+
+    /* Bottom Composer Box */
+    .composer-wrapper {
+      padding: 8px 12px 12px;
+      background: var(--bg-main);
+      border-top: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .attachments-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 6px;
+    }
+    .att-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--bg-user);
+      color: var(--accent);
+      font-size: 11.5px;
+      padding: 4px 9px;
+      border-radius: 8px;
+      font-weight: 500;
+    }
+    .att-chip button {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 13px;
+      line-height: 1;
+    }
+    .composer-box {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 8px 10px;
+      transition: 0.15s;
+    }
+    .composer-box:focus-within {
+      background: #fff;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.12);
+    }
+    textarea#promptInput {
+      width: 100%;
+      border: none;
+      background: transparent;
+      resize: none;
+      outline: none;
+      font-family: inherit;
+      font-size: 13px;
+      max-height: 110px;
+      min-height: 24px;
+      line-height: 1.4;
+      color: var(--text-main);
+    }
+    .composer-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 6px;
+      gap: 4px;
+    }
+    .tools-left {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      overflow: hidden;
+    }
+    .tool-btn {
+      background: transparent;
+      border: none;
+      border-radius: 8px;
+      padding: 4px 6px;
+      font-size: 11.5px;
+      color: var(--text-muted);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      white-space: nowrap;
+    }
+    .tool-btn:hover { background: rgba(0,0,0,0.06); color: var(--text-main); }
+
+    .model-pill-select {
+      background: rgba(0,0,0,0.04);
+      border: none;
+      border-radius: 8px;
+      padding: 4px 6px;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-muted);
+      cursor: pointer;
+      outline: none;
+      max-width: 110px;
+      text-overflow: ellipsis;
+    }
+    .model-pill-select:hover { background: rgba(0,0,0,0.08); color: var(--text-main); }
+
+    .send-btn {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 50%;
+      width: 28px;
+      height: 28px;
+      flex-shrink: 0;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      transition: 0.15s;
+    }
+    .send-btn:hover { background: var(--accent-hover); }
+  </style>
+</head>
+<body>
+
+  <!-- Top Header dengan Logo APIAIku + Provider Logos -->
+  <div class="header">
+    <div class="brand-group">
+      <div class="app-brand" title="APIAIku Multi-AI for Excel">
+        <svg viewBox="0 0 28 28" fill="none">
+          <rect width="28" height="28" rx="8" fill="url(#apiaikuBg)"/>
+          <path d="M14 5.5L16.3 11.7L22.5 14L16.3 16.3L14 22.5L11.7 16.3L5.5 14L11.7 11.7L14 5.5Z" fill="#FFFFFF"/>
+          <circle cx="20.5" cy="7.5" r="1.6" fill="#93C5FD"/>
+          <defs>
+            <linearGradient id="apiaikuBg" x1="0" y1="0" x2="28" y2="28">
+              <stop stop-color="#1A73E8"/>
+              <stop offset="1" stop-color="#7C3AED"/>
+            </linearGradient>
+          </defs>
+        </svg>
+        <span class="app-brand-name">APIAIku</span>
+      </div>
+
+      <div class="provider-logos" id="providerLogos">
+        <button type="button" class="logo-pill" data-provider="gemini" title="Google Gemini">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M12 2C12.4 7.5 16.5 11.6 22 12C16.5 12.4 12.4 16.5 12 22C11.6 16.5 7.5 12.4 2 12C7.5 11.6 11.6 7.5 12 2Z" fill="url(#gemGrad)"/><defs><linearGradient id="gemGrad" x1="2" y1="2" x2="22" y2="22"><stop stop-color="#4285F4"/><stop offset="0.5" stop-color="#9B72CB"/><stop offset="1" stop-color="#D96570"/></linearGradient></defs></svg>
+          <span class="key-dot"></span>
+        </button>
+        <button type="button" class="logo-pill" data-provider="venice" title="Venice.ai">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M4 5L12 19L20 5H16.2L12 12.8L7.8 5H4Z" fill="#E11D48"/></svg>
+          <span class="key-dot"></span>
+        </button>
+        <button type="button" class="logo-pill" data-provider="grok" title="xAI Grok">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M4 4L20 20M20 4L4 20" stroke="#111827" stroke-width="2.5" stroke-linecap="round"/><circle cx="12" cy="12" r="8" stroke="#111827" stroke-width="1.8"/></svg>
+          <span class="key-dot"></span>
+        </button>
+        <button type="button" class="logo-pill" data-provider="openai" title="OpenAI ChatGPT">
+          <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8.5" stroke="#10A37F" stroke-width="2.2" stroke-dasharray="4 2"/><circle cx="12" cy="12" r="3.5" fill="#10A37F"/></svg>
+          <span class="key-dot"></span>
+        </button>
+        <button type="button" class="logo-pill" data-provider="qwen" title="Alibaba Qwen">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M12 3L20 7.5V16.5L12 21L4 16.5V7.5L12 3Z" stroke="#6366F1" stroke-width="2.2"/><circle cx="12" cy="12" r="3" fill="#6366F1"/></svg>
+          <span class="key-dot"></span>
+        </button>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <button type="button" class="icon-btn" id="btnNewChat" title="Chat Baru">+</button>
+      <button type="button" class="icon-btn" id="btnToggleHistory" title="Riwayat Chat & Ekspor Terabox">🕒</button>
+      <button type="button" class="icon-btn" id="btnToggleSettings" title="Pengaturan API Key">⚙️</button>
+    </div>
+  </div>
+
+  <!-- Drawer Pengaturan API -->
+  <div class="drawer-overlay" id="settingsDrawer">
+    <div class="drawer-header">
+      <span>Pengaturan <span id="settingsProviderTitle">Google Gemini</span></span>
+      <button type="button" class="icon-btn" id="btnCloseSettings">✕</button>
+    </div>
+
+    <label for="apiKey">API Key</label>
+    <input type="text" id="apiKey" autocomplete="off" placeholder="Tempel API Key di sini..." />
+
+    <label for="customModelInput">Model ID</label>
+    <input type="text" id="customModelInput" placeholder="Contoh: gemini-3.8-flash" />
+
+    <button type="button" class="btn-primary" id="btnSaveSettings">Simpan & Tutup</button>
+  </div>
+
+  <!-- Drawer Riwayat Chat -->
+  <div class="drawer-overlay" id="historyDrawer">
+    <div class="drawer-header">
+      <span>Riwayat Percakapan</span>
+      <button type="button" class="icon-btn" id="btnCloseHistory">✕</button>
+    </div>
+
+    <div class="history-toolbar">
+      <button type="button" class="btn-secondary-sm" id="btnExportChat" title="Unduh file .md untuk disimpan di folder Terabox Sync">📥 Unduh (.md / Terabox)</button>
+      <button type="button" class="btn-danger-sm" id="btnClearAllHistory" title="Hapus semua riwayat">🗑️</button>
+    </div>
+
+    <div class="history-list" id="historyList"></div>
+  </div>
+
+  <!-- Chat History Area -->
+  <div class="chat-container" id="chatContainer">
+    <div class="welcome-screen" id="welcomeScreen">
+      <div class="welcome-logo">
+        <svg width="26" height="26" viewBox="0 0 28 28" fill="none">
+          <path d="M14 3L17 11L25 14L17 17L14 25L11 17L3 14L11 11L14 3Z" fill="url(#welcomeGrad)"/>
+          <defs><linearGradient id="welcomeGrad" x1="3" y1="3" x2="25" y2="25"><stop stop-color="#1A73E8"/><stop offset="1" stop-color="#8B5cf6"/></linearGradient></defs>
+        </svg>
+      </div>
+      <div class="welcome-title">Halo! Ada yang bisa dibantu?</div>
+      <div class="welcome-sub">Pilih logo AI di atas, lampirkan dokumen/gambar, atau blok sel Excel untuk diolah otomatis.</div>
+      <div class="quick-prompts">
+        <button type="button" class="chip-prompt" data-prompt="Ekstrak data dari lampiran ini menjadi tabel Markdown rapi siap tempel ke Excel">📄 Ekstrak isi file jadi tabel Excel</button>
+        <button type="button" class="chip-prompt" data-prompt="Buatkan rumus Excel paling efisien untuk data sel yang saya blok ini">🧮 Buatkan rumus Excel dari sel terpilih</button>
+        <button type="button" class="chip-prompt" data-prompt="Ringkas poin-poin penting dan hitung total angka dari data ini">📊 Ringkas & hitung total data</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Input Bar -->
+  <div class="composer-wrapper">
+    <div class="attachments-bar" id="attachmentsBar"></div>
+
+    <div class="composer-box">
+      <textarea id="promptInput" rows="1" placeholder="Tanya APIAIku... (Enter untuk kirim)"></textarea>
+      <div class="composer-toolbar">
+        <div class="tools-left">
+          <input type="file" id="fileInput" accept=".pdf,.txt,.csv,.json,.md,image/*" style="display:none;" />
+          <button type="button" class="tool-btn" id="btnAttachFile" title="Upload PDF, Gambar, CSV, atau file riwayat .md">📎 File</button>
+          <button type="button" class="tool-btn" id="btnAttachCells" title="Ambil sel terblok di Excel">⊞ Sel</button>
+          <select class="model-pill-select" id="quickModelSelect" title="Pilih Model"></select>
+        </div>
+        <button type="button" class="send-btn" id="btnSend" title="Kirim">➤</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    if (typeof pdfjsLib !== "undefined") {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    }
+
+    const SYSTEM_PROMPT = "Kamu adalah APIAIku, asisten AI cerdas di dalam Microsoft Excel. Jawablah dalam bahasa Indonesia secara ringkas, akurat, dan langsung ke inti. Jika pengguna meminta tabel atau ekstraksi data untuk Excel, sajikan dalam format tabel Markdown standar agar mudah dimasukkan ke sel Excel.";
+
+    const PROVIDERS = {
+      gemini: {
+        name: "Gemini",
+        label: "Google Gemini (AI Studio)",
+        url: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+        models: ["gemini-3.8-flash", "gemini-3.5-flash-lite", "gemini-3.6-flash", "gemma-4"]
+      },
+      venice: {
+        name: "Venice",
+        label: "Venice.ai",
+        url: "https://api.venice.ai/api/v1/chat/completions",
+        models: ["llama-3.3-70b", "deepseek-r1-671b", "qwen-2.5-vl"]
+      },
+      grok: {
+        name: "Grok",
+        label: "xAI Grok",
+        url: "https://api.x.ai/v1/chat/completions",
+        models: ["grok-3-mini", "grok-3"]
+      },
+      openai: {
+        name: "OpenAI",
+        label: "OpenAI (ChatGPT)",
+        url: "https://api.openai.com/v1/chat/completions",
+        models: ["gpt-4o-mini", "gpt-4o", "o3-mini"]
+      },
+      qwen: {
+        name: "Qwen",
+        label: "Alibaba Qwen",
+        url: "https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions",
+        models: ["qwen-plus", "qwen-turbo", "qwen-max"]
+      }
+    };
+
+    const HISTORY_STORAGE_KEY = "apiaiku_sessions_v1";
+    const MAX_SAVED_SESSIONS = 30;
+
+    let activeProvider = localStorage.getItem("active_ai_provider") || "gemini";
+    let currentSessionId = Date.now().toString();
+    let chatHistory = []; // Array of { role, content, displayText, badges }
+    let attachedFile = null;
+    let attachedCells = null;
+
+    const chatContainer = document.getElementById("chatContainer");
+    const welcomeScreen = document.getElementById("welcomeScreen");
+    const promptInput = document.getElementById("promptInput");
+    const attachmentsBar = document.getElementById("attachmentsBar");
+    const settingsDrawer = document.getElementById("settingsDrawer");
+    const historyDrawer = document.getElementById("historyDrawer");
+    const historyList = document.getElementById("historyList");
+    const settingsProviderTitle = document.getElementById("settingsProviderTitle");
+    const apiKeyInput = document.getElementById("apiKey");
+    const customModelInput = document.getElementById("customModelInput");
+    const quickModelSelect = document.getElementById("quickModelSelect");
+
+    // --- Manajemen Riwayat Ringan (Teks Saja, Maks 30 Sesi) ---
+    function loadSessions() {
+      try {
+        return JSON.parse(localStorage.getItem(HISTORY_STORAGE_KEY) || "[]");
+      } catch {
+        return [];
+      }
+    }
+
+    function saveCurrentSession() {
+      if (!chatHistory.length) return;
+      let sessions = loadSessions();
+      const firstUserMsg = chatHistory.find(m => m.role === "user");
+      const title = (firstUserMsg?.displayText || "Percakapan Baru").slice(0, 42);
+
+      // Simpan versi ringan (tanpa base64 gambar raksasa agar memori tetap hemat)
+      const lightMessages = chatHistory.map(m => ({
+        role: m.role,
+        displayText: m.displayText || (typeof m.content === "string" ? m.content : "(Lampiran)"),
+        badges: m.badges || []
+      }));
+
+      const existingIdx = sessions.findIndex(s => s.id === currentSessionId);
+      const sessionObj = {
+        id: currentSessionId,
+        title: title,
+        provider: PROVIDERS[activeProvider]?.name || "AI",
+        updatedAt: new Date().toLocaleString("id-ID", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }),
+        messages: lightMessages
+      };
+
+      if (existingIdx >= 0) {
+        sessions[existingIdx] = sessionObj;
+      } else {
+        sessions.unshift(sessionObj);
+      }
+
+      if (sessions.length > MAX_SAVED_SESSIONS) {
+        sessions = sessions.slice(0, MAX_SAVED_SESSIONS);
+      }
+      localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(sessions));
+    }
+
+    function renderHistoryList() {
+      const sessions = loadSessions();
+      historyList.innerHTML = "";
+      if (!sessions.length) {
+        historyList.innerHTML = `<div style="text-align:center;color:var(--text-muted);font-size:12px;padding:14px;">Belum ada riwayat tersimpan.</div>`;
+        return;
+      }
+      sessions.forEach(s => {
+        const item = document.createElement("div");
+        item.className = "history-item" + (s.id === currentSessionId ? " active-session" : "");
+        item.innerHTML = `
+          <div class="history-info">
+            <div class="history-title">${escapeHtml(s.title)}</div>
+            <div class="history-meta">${s.provider} · ${s.updatedAt} (${s.messages.length} pesan)</div>
+          </div>
+          <button type="button" class="history-del" title="Hapus sesi ini">✕</button>
+        `;
+        item.querySelector(".history-info").onclick = () => {
+          currentSessionId = s.id;
+          chatHistory = s.messages.map(m => ({
+            role: m.role,
+            content: m.displayText,
+            displayText: m.displayText,
+            badges: m.badges || []
+          }));
+          chatContainer.innerHTML = "";
+          chatHistory.forEach(m => appendMessage(m.role, m.displayText, m.badges));
+          historyDrawer.classList.remove("open");
+        };
+        item.querySelector(".history-del").onclick = (e) => {
+          e.stopPropagation();
+          const filtered = loadSessions().filter(x => x.id !== s.id);
+          localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(filtered));
+          renderHistoryList();
+        };
+        historyList.appendChild(item);
+      });
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    // Ekspor chat aktif ke file Markdown (.md) -> siap simpan di folder Terabox Sync
+    document.getElementById("btnExportChat").addEventListener("click", () => {
+      if (!chatHistory.length) {
+        alert("Belum ada percakapan di layar untuk diunduh.");
+        return;
+      }
+      const lines = [`# Riwayat APIAIku (${new Date().toLocaleString("id-ID")})\n`];
+      chatHistory.forEach(m => {
+        const sender = m.role === "user" ? "Saya" : "AI";
+        lines.push(`### ${sender}\n${m.displayText}\n`);
+      });
+      const blob = new Blob([lines.join("\n---\n\n")], { type: "text/markdown;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `APIAIku-Chat-${new Date().toISOString().slice(0,10)}.md`;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    document.getElementById("btnClearAllHistory").addEventListener("click", () => {
+      if (confirm("Hapus semua riwayat percakapan tersimpan?")) {
+        localStorage.removeItem(HISTORY_STORAGE_KEY);
+        renderHistoryList();
+      }
+    });
+
+    // --- Provider & Settings ---
+    function refreshLogoIndicators() {
+      document.querySelectorAll(".logo-pill").forEach(btn => {
+        const p = btn.dataset.provider;
+        btn.classList.toggle("active", p === activeProvider);
+        const hasKey = !!(localStorage.getItem(`ai_key_${p}`) || "").trim();
+        btn.classList.toggle("has-key", hasKey);
+      });
+    }
+
+    function selectProvider(pKey) {
+      if (!PROVIDERS[pKey]) pKey = "gemini";
+      activeProvider = pKey;
+      localStorage.setItem("active_ai_provider", pKey);
+      const cfg = PROVIDERS[pKey];
+
+      settingsProviderTitle.textContent = cfg.label;
+      apiKeyInput.value = localStorage.getItem(`ai_key_${pKey}`) || "";
+
+      const savedModel = localStorage.getItem(`ai_model_${pKey}`) || cfg.models[0];
+      customModelInput.value = savedModel;
+
+      quickModelSelect.innerHTML = "";
+      const modelList = cfg.models.includes(savedModel) ? cfg.models : [savedModel, ...cfg.models];
+      modelList.forEach(m => {
+        const opt = document.createElement("option");
+        opt.value = m;
+        opt.textContent = m;
+        if (m === savedModel) opt.selected = true;
+        quickModelSelect.appendChild(opt);
+      });
+
+      refreshLogoIndicators();
+    }
+
+    document.querySelectorAll(".logo-pill").forEach(btn => {
+      btn.addEventListener("click", () => selectProvider(btn.dataset.provider));
+    });
+
+    quickModelSelect.addEventListener("change", () => {
+      const val = quickModelSelect.value;
+      customModelInput.value = val;
+      localStorage.setItem(`ai_model_${activeProvider}`, val);
+    });
+
+    document.getElementById("btnToggleSettings").addEventListener("click", () => {
+      historyDrawer.classList.remove("open");
+      settingsDrawer.classList.toggle("open");
+      if (settingsDrawer.classList.contains("open")) apiKeyInput.focus();
+    });
+    document.getElementById("btnCloseSettings").addEventListener("click", () => settingsDrawer.classList.remove("open"));
+    document.getElementById("btnSaveSettings").addEventListener("click", () => {
+      localStorage.setItem(`ai_key_${activeProvider}`, apiKeyInput.value.trim());
+      const mVal = customModelInput.value.trim() || PROVIDERS[activeProvider].models[0];
+      localStorage.setItem(`ai_model_${activeProvider}`, mVal);
+      selectProvider(activeProvider);
+      settingsDrawer.classList.remove("open");
+    });
+
+    document.getElementById("btnToggleHistory").addEventListener("click", () => {
+      settingsDrawer.classList.remove("open");
+      renderHistoryList();
+      historyDrawer.classList.toggle("open");
+    });
+    document.getElementById("btnCloseHistory").addEventListener("click", () => historyDrawer.classList.remove("open"));
+
+    selectProvider(activeProvider);
+
+    document.getElementById("btnNewChat").addEventListener("click", () => {
+      currentSessionId = Date.now().toString();
+      chatHistory = [];
+      chatContainer.innerHTML = "";
+      chatContainer.appendChild(welcomeScreen);
+      welcomeScreen.style.display = "block";
+    });
+
+    document.querySelectorAll(".chip-prompt").forEach(btn => {
+      btn.addEventListener("click", () => {
+        promptInput.value = btn.dataset.prompt;
+        promptInput.focus();
+      });
+    });
+
+    promptInput.addEventListener("input", () => {
+      promptInput.style.height = "auto";
+      promptInput.style.height = Math.min(promptInput.scrollHeight, 110) + "px";
+    });
+
+    promptInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+
+    if (typeof Office !== "undefined") {
+      Office.onReady(() => {});
+    }
+
+    // --- Attachments ---
+    function renderAttachments() {
+      attachmentsBar.innerHTML = "";
+      if (attachedFile) {
+        const chip = document.createElement("div");
+        chip.className = "att-chip";
+        chip.innerHTML = `<span>📄 ${attachedFile.name}</span><button type="button" title="Hapus">&times;</button>`;
+        chip.querySelector("button").onclick = () => { attachedFile = null; renderAttachments(); };
+        attachmentsBar.appendChild(chip);
+      }
+      if (attachedCells) {
+        const chip = document.createElement("div");
+        chip.className = "att-chip";
+        chip.innerHTML = `<span>⊞ ${attachedCells.address}</span><button type="button" title="Hapus">&times;</button>`;
+        chip.querySelector("button").onclick = () => { attachedCells = null; renderAttachments(); };
+        attachmentsBar.appendChild(chip);
+      }
+    }
+
+    document.getElementById("btnAttachFile").addEventListener("click", () => document.getElementById("fileInput").click());
+    document.getElementById("fileInput").addEventListener("change", async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      if (file.type === "application/pdf") {
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        let fullText = "";
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const content = await page.getTextContent();
+          fullText += content.items.map(item => item.str).join(" ") + "\n";
+        }
+        attachedFile = { name: `${file.name} (${pdf.numPages} hal)`, text: fullText, imageBase64: null };
+        renderAttachments();
+      } else if (file.type.startsWith("image/")) {
+        const reader = new FileReader();
+        reader.onload = () => {
+          attachedFile = { name: file.name, text: "", imageBase64: reader.result };
+          renderAttachments();
+        };
+        reader.readAsDataURL(file);
+      } else {
+        const text = await file.text();
+        attachedFile = { name: file.name, text: text, imageBase64: null };
+        renderAttachments();
+      }
+      e.target.value = "";
+    });
+
+    document.getElementById("btnAttachCells").addEventListener("click", async () => {
+      try {
+        await Excel.run(async (context) => {
+          const range = context.workbook.getSelectedRange();
+          range.load(["values", "address"]);
+          await context.sync();
+          const text = range.values.map(row => row.join("\t")).join("\n");
+          attachedCells = { address: range.address.split("!").pop(), text: text };
+          renderAttachments();
+        });
+      } catch (err) {
+        alert("Gagal membaca sel Excel: " + err.message);
+      }
+    });
+
+    // --- Smart Parser untuk Tulis Tabel ke Banyak Sel Excel ---
+    function parseToExcelMatrix(text) {
+      const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
+      const mdTableLines = lines.filter(l => l.startsWith("|") && l.endsWith("|"));
+      if (mdTableLines.length >= 2) {
+        const rows = mdTableLines
+          .filter(l => !/^\|[\s\-:|]+\|$/.test(l)) // buang baris separator |---|---|
+          .map(l => l.slice(1, -1).split("|").map(cell => cell.trim()));
+        if (rows.length > 0) {
+          const maxCols = Math.max(...rows.map(r => r.length));
+          return rows.map(r => {
+            while (r.length < maxCols) r.push("");
+            return r;
+          });
+        }
+      }
+      return [[text]];
+    }
+
+    function createAiBubbleContainer() {
+      welcomeScreen.style.display = "none";
+      const msgDiv = document.createElement("div");
+      msgDiv.className = "msg ai";
+      const bubble = document.createElement("div");
+      bubble.className = "bubble";
+      msgDiv.appendChild(bubble);
+      chatContainer.appendChild(msgDiv);
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+      return { msgDiv, bubble };
+    }
+
+    function attachAiActions(msgDiv, rawText) {
+      const actions = document.createElement("div");
+      actions.className = "ai-actions";
+
+      const btnCopy = document.createElement("button");
+      btnCopy.type = "button";
+      btnCopy.className = "action-pill";
+      btnCopy.textContent = "📋 Salin";
+      btnCopy.onclick = () => {
+        navigator.clipboard.writeText(rawText);
+        btnCopy.textContent = "✓ Tersalin";
+        setTimeout(() => btnCopy.textContent = "📋 Salin", 1500);
+      };
+
+      const btnExcel = document.createElement("button");
+      btnExcel.type = "button";
+      btnExcel.className = "action-pill excel";
+      btnExcel.textContent = "⊞ Tulis ke Sel Aktif";
+      btnExcel.onclick = async () => {
+        try {
+          const matrix = parseToExcelMatrix(rawText);
+          await Excel.run(async (context) => {
+            const startCell = context.workbook.getSelectedRange().getCell(0, 0);
+            const targetRange = startCell.getResizedRange(matrix.length - 1, matrix[0].length - 1);
+            targetRange.values = matrix;
+            await context.sync();
+            btnExcel.textContent = matrix.length > 1 ? `✓ ${matrix.length} Baris Masuk` : "✓ Masuk ke Excel";
+            setTimeout(() => btnExcel.textContent = "⊞ Tulis ke Sel Aktif", 1800);
+          });
+        } catch (err) {
+          alert("Gagal menulis ke sel: " + err.message);
+        }
+      };
+
+      actions.appendChild(btnCopy);
+      actions.appendChild(btnExcel);
+      msgDiv.appendChild(actions);
+    }
+window.editUserMessage = function(msgIndex) {
+      if (msgIndex < 0 || msgIndex >= chatHistory.length) return;
+      const targetMsg = chatHistory[msgIndex];
+      
+      promptInput.value = targetMsg.displayText || "";
+      promptInput.style.height = "auto";
+      promptInput.style.height = Math.min(promptInput.scrollHeight, 110) + "px";
+      promptInput.focus();
+
+      chatHistory = chatHistory.slice(0, msgIndex);
+      saveCurrentSession();
+
+      chatContainer.innerHTML = "";
+      if (!chatHistory.length) {
+        chatContainer.appendChild(welcomeScreen);
+        welcomeScreen.style.display = "block";
+      } else {
+        chatHistory.forEach((m, idx) => appendMessage(m.role, m.displayText, m.badges || [], idx));
+      }
+    };
+function appendMessage(role, rawText, badges = [], msgIndex = -1) {
+      welcomeScreen.style.display = "none";
+      const msgDiv = document.createElement("div");
+      msgDiv.className = `msg ${role}`;
+
+      const bubble = document.createElement("div");
+      bubble.className = "bubble";
+
+      if (role === "user") {
+        if (badges.length) {
+          const badgeWrap = document.createElement("div");
+          badgeWrap.innerHTML = badges.map(b => `<span class="msg-attachment-badge">${b}</span>`).join(" ");
+          bubble.appendChild(badgeWrap);
+        }
+        const textNode = document.createElement("div");
+        textNode.textContent = rawText;
+        bubble.appendChild(textNode);
+        msgDiv.appendChild(bubble);
+
+        const idx = msgIndex >= 0 ? msgIndex : chatHistory.length;
+        const userActions = document.createElement("div");
+        userActions.className = "user-actions";
+        const btnEdit = document.createElement("button");
+        btnEdit.type = "button";
+        btnEdit.className = "edit-msg-btn";
+        btnEdit.textContent = "✏️ Edit";
+        btnEdit.onclick = () => editUserMessage(idx);
+        userActions.appendChild(btnEdit);
+        msgDiv.appendChild(userActions);
+
+        chatContainer.appendChild(msgDiv);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+      } else {
+        bubble.innerHTML = typeof marked !== "undefined" ? marked.parse(rawText) : rawText;
+        msgDiv.appendChild(bubble);
+        attachAiActions(msgDiv, rawText);
+        chatContainer.appendChild(msgDiv);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+      }
+    }
+
+    document.getElementById("btnSend").addEventListener("click", sendMessage);
+
+    async function sendMessage() {
+      const cfg = PROVIDERS[activeProvider];
+      const apiKey = (localStorage.getItem(`ai_key_${activeProvider}`) || "").trim();
+      const model = quickModelSelect.value;
+      const userPrompt = promptInput.value.trim();
+
+      if (!apiKey) {
+        settingsDrawer.classList.add("open");
+        apiKeyInput.focus();
+        return;
+      }
+      if (!userPrompt && !attachedFile && !attachedCells) return;
+
+      const badges = [];
+      if (attachedFile) badges.push(`📄 ${attachedFile.name}`);
+      if (attachedCells) badges.push(`⊞ Sel ${attachedCells.address}`);
+
+      const displayPrompt = userPrompt || "(Lampiran dikirim)";
+      appendMessage("user", displayPrompt, badges);
+
+      let fullContentText = userPrompt;
+      if (attachedCells) fullContentText += `\n\n--- DATA SEL EXCEL (${attachedCells.address}) ---\n${attachedCells.text}`;
+      if (attachedFile && attachedFile.text) fullContentText += `\n\n--- ISI FILE (${attachedFile.name}) ---\n${attachedFile.text}`;
+
+      const apiContent = (attachedFile && attachedFile.imageBase64)
+        ? [{ type: "text", text: fullContentText || "Analisis gambar ini." }, { type: "image_url", image_url: { url: attachedFile.imageBase64 } }]
+        : fullContentText;
+
+      chatHistory.push({ role: "user", content: apiContent, displayText: displayPrompt, badges });
+      saveCurrentSession();
+
+      promptInput.value = "";
+      promptInput.style.height = "auto";
+      attachedFile = null;
+      attachedCells = null;
+      renderAttachments();
+
+      const { msgDiv, bubble } = createAiBubbleContainer();
+      bubble.innerHTML = `<div class="typing"><span class="dot-pulse"></span> ${cfg.name} mengetik...</div>`;
+
+      // Batasi konteks maksimal 10 pesan terakhir agar hemat token & tetap kencang
+      const recentContext = chatHistory.slice(-10).map(m => ({ role: m.role, content: m.content }));
+      const messagesPayload = [{ role: "system", content: SYSTEM_PROMPT }, ...recentContext];
+
+      const requestBody = {
+        model: model,
+        messages: messagesPayload,
+        stream: true
+      };
+      // Kurangi waktu mikir berlebih pada model Gemini Flash agar respons instan
+      if (activeProvider === "gemini" && model.includes("flash") && !model.includes("lite")) {
+        requestBody.reasoning_effort = "low";
+      }
+
+      try {
+        const res = await fetch(cfg.url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
+          body: JSON.stringify(requestBody)
+        });
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          const errDetail = Array.isArray(errData) ? errData[0]?.error?.message : (errData.error?.message || `HTTP ${res.status}`);
+          bubble.innerHTML = typeof marked !== "undefined" ? marked.parse(`**Error (${cfg.name} · ${model}):**\n${errDetail}`) : errDetail;
+          chatHistory.pop();
+          return;
+        }
+
+        // Baca Streaming SSE secara real-time
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder("utf-8");
+        let fullReply = "";
+        let buffer = "";
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop();
+
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed || !trimmed.startsWith("data:")) continue;
+            const dataStr = trimmed.slice(5).trim();
+            if (dataStr === "[DONE]") continue;
+            try {
+              const json = JSON.parse(dataStr);
+              const delta = json.choices?.[0]?.delta?.content || "";
+              if (delta) {
+                fullReply += delta;
+                bubble.innerHTML = typeof marked !== "undefined" ? marked.parse(fullReply) : fullReply;
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+              }
+            } catch {}
+          }
+        }
+
+        if (!fullReply) fullReply = "(Tidak ada teks balasan dari server)";
+        bubble.innerHTML = typeof marked !== "undefined" ? marked.parse(fullReply) : fullReply;
+        attachAiActions(msgDiv, fullReply);
+
+        chatHistory.push({ role: "assistant", content: fullReply, displayText: fullReply });
+        saveCurrentSession();
+
+      } catch (err) {
+        bubble.innerHTML = typeof marked !== "undefined" ? marked.parse(`**Gagal terhubung ke ${cfg.name}:** ${err.message}`) : err.message;
+        chatHistory.pop();
+      }
+    }
+  </script>
+</body>
+</html>
