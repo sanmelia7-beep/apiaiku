@@ -648,7 +648,7 @@
       pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     }
 
-    const SYSTEM_PROMPT = "Kamu adalah APIAIku, asisten AI cerdas di dalam Microsoft Excel. Jawablah dalam bahasa Indonesia secara ringkas, akurat, dan langsung ke inti. Jika pengguna meminta tabel atau ekstraksi data untuk Excel, sajikan dalam format tabel Markdown standar agar mudah dimasukkan ke sel Excel.";
+const SYSTEM_PROMPT = `Kamu adalah APIAIku, asisten AI cerdas di dalam Microsoft Excel. Jawablah dalam bahasa Indonesia yang ringkas, jelas, dan membantu.\n\nKEMAMPUAN EKSEKUSI EXCEL: Jika pengguna meminta menulis data, memasang rumus Excel apa pun (SUM, SUMIFS, VLOOKUP, XLOOKUP, INDEX-MATCH, IF, COUNTIFS, TEXT, dll.), memformat sel/warna/Rupiah, atau membuat sheet baru, WAJIB sertakan blok JSON di akhir jawabanmu dengan format PERSIS seperti ini:\n\`\`\`excel-action\n[{"action":"write","range":"M35","values":[["=SUM(M15:M34)"]]},{"action":"format","range":"M35","bold":true,"fill":"#FEF08A","numberFormat":"Rp #,##0"}]\n\`\`\`\nAturan wajib:\n1. Semua rumus Excel wajib berbahasa Inggris standar dan diawali tanda '='.\n2. Dimensi array 'values' (jumlah baris x kolom) harus cocok persis dengan ukuran 'range'.\n3. Daftar aksi yang tersedia: 'write' (range, values, sheet?), 'format' (range, fill?, fontColor?, bold?, numberFormat?, autofit?, sheet?), 'create_sheet' (name, activate?), dan 'clear' (range, sheet?).`;
 
     const PROVIDERS = {
       gemini: {
@@ -1046,10 +1046,84 @@
         }
       };
 
-      actions.appendChild(btnCopy);
+actions.appendChild(btnCopy);
       actions.appendChild(btnExcel);
+
+      const actionMatch = rawText.match(/```excel-action\s*([\s\S]*?)```/i);
+      if (actionMatch) {
+        try {
+          const parsedCmds = JSON.parse(actionMatch[1].trim());
+          if (Array.isArray(parsedCmds) && parsedCmds.length > 0) {
+            const btnExec = document.createElement("button");
+            btnExec.type = "button";
+            btnExec.className = "action-pill";
+            btnExec.style.cssText = "background:#2563eb;color:#fff;font-weight:600;border-color:#2563eb;";
+            btnExec.textContent = `⚡ Jalankan di Excel (${parsedCmds.length} aksi)`;
+            btnExec.onclick = () => window.executeExcelCommands(parsedCmds, btnExec);
+            actions.prepend(btnExec);
+          }
+        } catch (e) { console.warn("JSON excel-action tidak valid:", e); }
+      }
+
       msgDiv.appendChild(actions);
     }
+
+    window.executeExcelCommands = async function(commands, statusBtn) {
+      if (!window.Excel) {
+        alert("Fitur ini hanya jalan di dalam Microsoft Excel.");
+        return;
+      }
+      try {
+        if (statusBtn) { statusBtn.disabled = true; statusBtn.textContent = "⏳ Mengerjakan..."; }
+        await Excel.run(async (context) => {
+          for (const cmd of commands) {
+            let sheet = cmd.sheet
+              ? context.workbook.worksheets.getItemOrNullObject(cmd.sheet)
+              : context.workbook.worksheets.getActiveWorksheet();
+            await context.sync();
+
+            if (cmd.action === "create_sheet") {
+              const existing = context.workbook.worksheets.getItemOrNullObject(cmd.name);
+              await context.sync();
+              if (existing.isNullObject) {
+                const newSheet = context.workbook.worksheets.add(cmd.name);
+                if (cmd.activate !== false) newSheet.activate();
+              } else if (cmd.activate !== false) {
+                existing.activate();
+              }
+              continue;
+            }
+
+            if (sheet.isNullObject) continue;
+
+            if (cmd.action === "write" && cmd.range && cmd.values) {
+              const rng = sheet.getRange(cmd.range);
+              rng.values = cmd.values;
+            } else if (cmd.action === "format" && cmd.range) {
+              const rng = sheet.getRange(cmd.range);
+              if (cmd.fill) rng.format.fill.color = cmd.fill;
+              if (cmd.fontColor) rng.format.font.color = cmd.fontColor;
+              if (typeof cmd.bold === "boolean") rng.format.font.bold = cmd.bold;
+              if (cmd.numberFormat) rng.numberFormat = [[cmd.numberFormat]];
+              if (cmd.autofit) rng.format.autofitColumns();
+            } else if (cmd.action === "clear" && cmd.range) {
+              sheet.getRange(cmd.range).clear();
+            }
+          }
+          await context.sync();
+        });
+        if (statusBtn) {
+          statusBtn.textContent = "✅ Selesai Dikerjakan!";
+          statusBtn.style.background = "#16a34a";
+          statusBtn.style.borderColor = "#16a34a";
+          statusBtn.style.color = "#fff";
+        }
+      } catch (err) {
+        console.error(err);
+        alert("Gagal mengeksekusi perintah Excel: " + err.message);
+        if (statusBtn) { statusBtn.disabled = false; statusBtn.textContent = "⚡ Jalankan di Excel"; }
+      }
+    };
 window.editUserMessage = function(msgIndex) {
       if (msgIndex < 0 || msgIndex >= chatHistory.length) return;
       const targetMsg = chatHistory[msgIndex];
