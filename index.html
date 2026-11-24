@@ -966,14 +966,46 @@ const SYSTEM_PROMPT = `Kamu adalah APIAIku, asisten AI cerdas di dalam Microsoft
       e.target.value = "";
     });
 
-    document.getElementById("btnAttachCells").addEventListener("click", async () => {
+document.getElementById("btnAttachCells").addEventListener("click", async () => {
       try {
         await Excel.run(async (context) => {
-          const range = context.workbook.getSelectedRange();
-          range.load(["values", "address"]);
+          const selRange = context.workbook.getSelectedRange();
+          selRange.load(["values", "address", "rowCount", "columnCount"]);
           await context.sync();
-          const text = range.values.map(row => row.join("\t")).join("\n");
-          attachedCells = { address: range.address.split("!").pop(), text: text };
+
+          // Jika kamu sedang memblok banyak sel (lebih dari 1 sel), baca area blok itu saja
+          if (selRange.rowCount > 1 || selRange.columnCount > 1) {
+            const text = selRange.values.map(row => row.join("\t")).join("\n");
+            attachedCells = { address: selRange.address, text: text };
+          } else {
+            // Jika tidak memblok apa pun (cuma klik 1 sel), sapu & baca SEMUA sheet otomatis!
+            const sheets = context.workbook.worksheets;
+            sheets.load("items/name");
+            await context.sync();
+
+            const usedRanges = sheets.items.map(s => {
+              const ur = s.getUsedRangeOrNullObject(true);
+              ur.load(["values", "address", "isNullObject"]);
+              return { name: s.name, range: ur };
+            });
+            await context.sync();
+
+            let allSheetsText = [];
+            let sheetNames = [];
+            for (const item of usedRanges) {
+              if (!item.range.isNullObject && item.range.values) {
+                sheetNames.push(item.name);
+                // Batasi maksimal 250 baris per sheet agar tidak melebihi batas memori AI
+                const rows = item.range.values.slice(0, 250);
+                const sheetText = rows.map(r => r.join("\t")).join("\n");
+                allSheetsText.push(`=== SHEET: ${item.name} (${item.range.address.split("!").pop()}) ===\n${sheetText}`);
+              }
+            }
+            attachedCells = {
+              address: `Semua Sheet (${sheetNames.join(", ")})`,
+              text: allSheetsText.join("\n\n")
+            };
+          }
           renderAttachments();
         });
       } catch (err) {
